@@ -65,15 +65,35 @@ async function initDB() {
     )
   `);
 
+  // Create tables... (existing logic remains same)
+
+  // Seed demo user: demo / demo123
+  try {
+    const demoExists = queryOne('SELECT id FROM users WHERE username = ?', ['demo']);
+    if (!demoExists) {
+      const bcrypt = require('bcryptjs');
+      const password_hash = await bcrypt.hash('demo123', 12);
+      db.run('INSERT INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?)', 
+        ['demo-id', 'demo', 'demo@example.com', password_hash]);
+      console.log('✅ Demo user seeded');
+    }
+  } catch (err) {
+    console.error('Failed to seed demo user:', err);
+  }
+
   saveDB();
   return db;
 }
 
 function saveDB() {
-  if (db) {
-    const data = db.export();
-    const buffer = Buffer.from(data);
-    fs.writeFileSync(dbPath, buffer);
+  if (db && !isVercel) { // Only save to disk if not on Vercel or if we handle /tmp specially
+    try {
+      const data = db.export();
+      const buffer = Buffer.from(data);
+      fs.writeFileSync(dbPath, buffer);
+    } catch (e) {
+      console.error('Failed to save database to disk:', e);
+    }
   }
 }
 
@@ -101,8 +121,13 @@ function queryOne(sql, params = []) {
 
 // Helper: run INSERT/UPDATE/DELETE
 function execute(sql, params = []) {
-  db.run(sql, params);
-  saveDB();
+  try {
+    db.run(sql, params);
+    saveDB();
+  } catch (err) {
+    console.error('Database execute error:', err, 'SQL:', sql);
+    throw err;
+  }
 }
 
 module.exports = { initDB, getDB, saveDB, queryAll, queryOne, execute };
