@@ -17,15 +17,23 @@ try {
 let db = null;
 
 async function initDB() {
-  const SQL = await initSqlJs();
+  if (db) return db;
 
-  // Load existing database if it exists
-  if (fs.existsSync(dbPath)) {
-    const fileBuffer = fs.readFileSync(dbPath);
-    db = new SQL.Database(fileBuffer);
-  } else {
-    db = new SQL.Database();
-  }
+  try {
+    const SQL = await initSqlJs({
+      // On Vercel, we might need to help it find the wasm file
+      locateFile: file => path.join(__dirname, 'node_modules', 'sql.js', 'dist', file)
+    });
+
+    // Load existing database if it exists
+    if (fs.existsSync(dbPath)) {
+      const fileBuffer = fs.readFileSync(dbPath);
+      db = new SQL.Database(fileBuffer);
+    } else {
+      db = new SQL.Database();
+    }
+    
+    // ... (rest of table creation logic)
 
   // Create tables
   db.run(`
@@ -69,8 +77,12 @@ async function initDB() {
 
   // Seed demo user: demo / demo123
   try {
-    const demoExists = queryOne('SELECT id FROM users WHERE username = ?', ['demo']);
-    if (!demoExists) {
+    const stmt = db.prepare('SELECT id FROM users WHERE username = ?');
+    stmt.bind(['demo']);
+    const exists = stmt.step();
+    stmt.free();
+    
+    if (!exists) {
       const bcrypt = require('bcryptjs');
       const password_hash = await bcrypt.hash('demo123', 12);
       db.run('INSERT INTO users (id, username, email, password_hash) VALUES (?, ?, ?, ?)', 
@@ -83,6 +95,10 @@ async function initDB() {
 
   saveDB();
   return db;
+  } catch (err) {
+    console.error('Database initialization error:', err);
+    throw err;
+  }
 }
 
 function saveDB() {
@@ -103,6 +119,7 @@ function getDB() {
 
 // Helper: run a query and return all results as array of objects
 function queryAll(sql, params = []) {
+  if (!db) throw new Error('Database not initialized. Call initDB() first.');
   const stmt = db.prepare(sql);
   stmt.bind(params);
   const results = [];
@@ -121,6 +138,7 @@ function queryOne(sql, params = []) {
 
 // Helper: run INSERT/UPDATE/DELETE
 function execute(sql, params = []) {
+  if (!db) throw new Error('Database not initialized. Call initDB() first.');
   try {
     db.run(sql, params);
     saveDB();
