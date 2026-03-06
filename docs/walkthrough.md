@@ -74,4 +74,6 @@ The project has been successfully initialized as a Git repository, pushed to the
 - ✅ Chapters have thematic titles ("The First Encounter", "The Hardest Lesson", etc.)
 - ✅ Storybook shows 7 total chapters with dot navigation
 - ✅ Style selector works with Deep Dive (casual/poetic/inspirational)
+- ✅ **Fixed:** Demo login (demo / demo123) now works reliably on Vercel
+- ✅ **Fixed:** Database initialization issue on serverless functions resolved
 - ✅ All original features still working (auth, add people, generate, PDF export)
