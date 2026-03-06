@@ -63,7 +63,9 @@ The **Deep Dive** feature transforms a long life story about one person into a m
 
 **GitHub Repository:** [https://github.com/amruthav0607/ai-story.git](https://github.com/amruthav0607/ai-story.git)
 
-The project has been successfully initialized as a Git repository and pushed to the main branch.
+**Live Demo (Vercel):** [https://ai-story-kappa.vercel.app/](https://ai-story-kappa.vercel.app/)
+
+The project has been successfully initialized as a Git repository, pushed to the main branch, and configured for serverless deployment on Vercel.
 
 ## Verification Results
 
