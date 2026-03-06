@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Life Chapters – Create a personal AI-generated storybook from the people who shaped your life.">
+  <title>Life Chapters – AI Storybook Generator</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">
+        <span class="icon">📖</span>
+        <span>Life Chapters</span>
+      </a>
+      <ul class="navbar-nav" id="nav-links">
+        <li><a href="/auth" id="nav-login">Get Started</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-badge">✨ AI-Powered Storytelling</div>
+      <h1>Turn Your Life's<br><span class="gradient-text">Key People</span> Into Stories</h1>
+      <p class="hero-subtitle">
+        Every person who touched your life deserves a chapter. 
+        Create a beautiful, AI-generated storybook celebrating the mentors, friends, 
+        and pivotal figures who shaped who you are.
+      </p>
+      <div class="hero-actions">
+        <a href="/auth" class="btn btn-primary btn-lg" id="hero-cta">Begin Your Storybook</a>
+        <a href="#features" class="btn btn-secondary btn-lg">See How It Works</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="section-header">
+        <h2>How Life Chapters Works</h2>
+        <p>Four simple steps to your personal storybook</p>
+      </div>
+      <div class="features-grid">
+        <div class="card feature-card fade-in">
+          <span class="feature-icon">👤</span>
+          <h3>Add Your People</h3>
+          <p>Enter the names, roles, and memories of people who influenced your life.</p>
+        </div>
+        <div class="card feature-card fade-in">
+          <span class="feature-icon">🤖</span>
+          <h3>AI Generates Chapters</h3>
+          <p>Our AI transforms your memories into beautifully written narrative chapters.</p>
+        </div>
+        <div class="card feature-card fade-in">
+          <span class="feature-icon">📚</span>
+          <h3>Read Your Storybook</h3>
+          <p>Navigate through your personal storybook with a beautiful reading experience.</p>
+        </div>
+        <div class="card feature-card fade-in">
+          <span class="feature-icon">📤</span>
+          <h3>Export & Share</h3>
+          <p>Download your storybook as a PDF or choose to share it with others.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sample Chapter Preview -->
+  <section class="section">
+    <div class="container container-md">
+      <div class="section-header">
+        <h2>A Glimpse Inside</h2>
+        <p>Here's what an AI-generated chapter looks like</p>
+      </div>
+      <div class="card">
+        <div class="chapter-number">Chapter 1 · The Mentor</div>
+        <h3 style="margin-bottom: 1rem; background: var(--gradient-hero); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 1.6rem;">The Guiding Light</h3>
+        <div class="chapter-narrative">
+          <p>Every great journey has its defining encounters — those pivotal moments when someone appears and challenges you to become more than you thought possible. For me, that someone was Mrs. Patel.</p>
+          <p>As my mentor, Mrs. Patel didn't just occupy space in my life — she expanded it. That afternoon in the library when she handed me a book and said "This will change everything" — that became a cornerstone, proof that we are all capable of profound growth when the right person believes in us.</p>
+          <p>The fire that Mrs. Patel lit inside me still burns. Not with the same flame, but with the same warmth — reminding me, every single day, of what's possible when one person decides to make a difference.</p>
+        </div>
+      </div>
+      <div class="quote-decoration" style="margin-top: 2rem;">
+        Every person is a chapter waiting to be written.
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <p>Life Chapters — AI Storybook Generator · Made with ❤️</p>
+    </div>
+  </footer>
+
+  <script>
+    // Check if user is logged in
+    fetch('/api/auth/me')
+      .then(r => r.json())
+      .then(data => {
+        if (data.user) {
+          document.getElementById('nav-links').innerHTML = `
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/storybook">My Storybook</a></li>
+            <li><button onclick="logout()" id="nav-logout">Logout</button></li>
+          `;
+          document.getElementById('hero-cta').href = '/dashboard';
+          document.getElementById('hero-cta').textContent = 'Go to Dashboard';
+        }
+      }).catch(() => {});
+
+    function logout() {
+      fetch('/api/auth/logout', { method: 'POST' })
+        .then(() => window.location.reload());
+    }
+
+    // Scroll animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>

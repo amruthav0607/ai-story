@@ -1,0 +1,20 @@
+{
+  "name": "life-chapters",
+  "version": "1.0.0",
+  "description": "AI Storybook Generator – Create personal storybooks from life influences",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.21.0",
+    "express-session": "^1.18.0",
+    "sql.js": "^1.11.0",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Add people and generate your AI storybook chapters.">
+  <title>Dashboard – Life Chapters</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">
+        <span class="icon">📖</span>
+        <span>Life Chapters</span>
+      </a>
+      <ul class="navbar-nav">
+        <li><a href="/dashboard" style="color: var(--accent);">Dashboard</a></li>
+        <li><a href="/storybook">My Storybook</a></li>
+        <li><button onclick="logout()" id="nav-logout">Logout</button></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="container">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+      <div>
+        <h1 id="welcome-title">Your Story Begins</h1>
+        <p style="color: var(--text-secondary); margin-top: 0.25rem;">Add the people who shaped your journey</p>
+      </div>
+      <a href="/storybook" class="btn btn-secondary" id="view-storybook-btn" style="display: none;">
+        📚 View Storybook
+      </a>
+    </div>
+
+    <!-- Add Person Form -->
+    <div class="add-form-container" id="add-form-section">
+      <h3 style="margin-bottom: 1.5rem;">✨ Add a Person</h3>
+      <form id="add-person-form">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label" for="person-name">Person's Name</label>
+            <input type="text" class="form-input" id="person-name" placeholder="e.g. Mrs. Patel" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="person-role">Role in Your Life</label>
+            <select class="form-select" id="person-role" required>
+              <option value="">Select a role...</option>
+              <option value="friend">Friend</option>
+              <option value="mentor">Mentor</option>
+              <option value="lesson">Life Lesson</option>
+              <option value="family">Family</option>
+              <option value="partner">Partner</option>
+              <option value="colleague">Colleague</option>
+              <option value="stranger">Stranger</option>
+              <option value="rival">Rival</option>
+              <option value="inspiration">Inspiration</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="person-memory">Memory or Impact</label>
+          <textarea class="form-textarea" id="person-memory" placeholder="Describe a memory, impact, or what this person meant to you..." required></textarea>
+        </div>
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+          <button type="submit" class="btn btn-primary" id="add-person-btn">
+            ✚ Add Person
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- People Cards -->
+    <div class="people-grid" id="people-grid">
+      <!-- Dynamically populated -->
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" id="empty-state">
+      <div class="icon">🌱</div>
+      <h3>No People Added Yet</h3>
+      <p>Start adding the people who influenced your life using the form above. Each person becomes a chapter in your storybook.</p>
+    </div>
+
+    <!-- Generation Panel -->
+    <div class="generation-panel" id="generation-panel" style="display: none;">
+      <h3>🤖 Generate Your Storybook</h3>
+      <p style="color: var(--text-secondary); margin-top: 0.5rem;">Choose a writing style and let AI create your chapters</p>
+      
+      <div class="style-selector" id="style-selector">
+        <button class="style-option active" data-style="casual">☕ Casual</button>
+        <button class="style-option" data-style="poetic">🌙 Poetic</button>
+        <button class="style-option" data-style="inspirational">🔥 Inspirational</button>
+      </div>
+
+      <button class="btn btn-primary btn-lg" id="generate-all-btn">
+        ✨ Generate All Chapters
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loading" style="display: none;">
+    <div class="spinner" style="width: 48px; height: 48px; border-width: 3px;"></div>
+    <div class="loading-text" id="loading-text">Crafting your story...</div>
+  </div>
+
+  <!-- Deep Dive Modal -->
+  <div class="modal-overlay" id="deep-dive-modal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeDeepDive()">&times;</button>
+      <div class="modal-header">
+        <span class="modal-icon">🚀</span>
+        <h2 id="modal-person-name">Deep Dive: Tarika</h2>
+        <p style="color: var(--text-secondary); margin-top: 0.5rem; font-family: var(--font-body); font-size: 0.95rem;">
+          Transform a detailed story into a multi-chapter experience
+        </p>
+      </div>
+      <div class="modal-body">
+        <p class="deep-dive-info">
+          Paste a detailed life story or several memories below. Our AI will analyze the phases of the story and split it into multiple themed chapters.
+        </p>
+        <textarea class="deep-dive-textarea" id="deep-dive-text" placeholder="Once upon a time... (Paste your long story here)"></textarea>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 1rem; align-items: center;">
+        <button class="btn btn-primary btn-lg" onclick="submitDeepDive()">
+          🚀 Create Multi-Chapter Story
+        </button>
+        <button class="btn btn-ghost" onclick="closeDeepDive()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let currentStyle = 'casual';
+    let people = [];
+    let chapters = [];
+
+    // ── Init ──
+    async function init() {
+      const authRes = await fetch('/api/auth/me');
+      const authData = await authRes.json();
+      if (!authData.user) {
+        window.location.href = '/auth';
+        return;
+      }
+      document.getElementById('welcome-title').textContent = `Welcome, ${authData.user.username}`;
+      await loadPeople();
+      await loadChapters();
+    }
+
+    // ── Load People ──
+    async function loadPeople() {
+      const res = await fetch('/api/people');
+      const data = await res.json();
+      people = data.people || [];
+      renderPeople();
+    }
+
+    // ── Load Chapters ──
+    async function loadChapters() {
+      const res = await fetch('/api/chapters');
+      const data = await res.json();
+      chapters = data.chapters || [];
+      if (chapters.length > 0) {
+        document.getElementById('view-storybook-btn').style.display = 'inline-flex';
+      }
+    }
+
+    // ── Render People ──
+    function renderPeople() {
+      const grid = document.getElementById('people-grid');
+      const emptyState = document.getElementById('empty-state');
+      const genPanel = document.getElementById('generation-panel');
+
+      if (people.length === 0) {
+        grid.innerHTML = '';
+        emptyState.style.display = 'block';
+        genPanel.style.display = 'none';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+      genPanel.style.display = 'block';
+
+      grid.innerHTML = people.map((p, i) => {
+        const hasChapter = chapters.some(c => c.person_id === p.id);
+        const roleIcons = {
+          friend: '🤝', mentor: '🎓', lesson: '💡', family: '🏠',
+          partner: '💕', colleague: '💼', stranger: '🌟', rival: '⚔️', inspiration: '🔥'
+        };
+        return `
+          <div class="card person-card fade-in visible" style="animation-delay: ${i * 0.1}s">
+            <div class="card-header">
+              <div>
+                <div class="card-title">${roleIcons[p.role] || '👤'} ${escapeHtml(p.name)}</div>
+              </div>
+              <span class="card-badge badge-${p.role}">${p.role}</span>
+            </div>
+            <div class="card-body">
+              <p class="memory-text">${escapeHtml(p.memory)}</p>
+            </div>
+            <div class="card-actions">
+              <button class="btn btn-ghost btn-sm" onclick="generateOne('${p.id}')">
+                ${hasChapter ? '🔄 Regenerate' : '✨ Generate'}
+              </button>
+              <button class="btn btn-secondary btn-sm" onclick="openDeepDive('${p.id}', '${escapeHtml(p.name)}')">
+                🚀 Deep Dive
+              </button>
+              <button class="btn btn-danger btn-sm" onclick="deletePerson('${p.id}')">
+                🗑 Remove
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ── Add Person ──
+    document.getElementById('add-person-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const name = document.getElementById('person-name').value.trim();
+      const role = document.getElementById('person-role').value;
+      const memory = document.getElementById('person-memory').value.trim();
+
+      if (!name || !role || !memory) return;
+
+      const res = await fetch('/api/people', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, role, memory })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showToast(`${name} added to your story!`, 'success');
+        document.getElementById('add-person-form').reset();
+        await loadPeople();
+      } else {
+        showToast(data.error || 'Failed to add person', 'error');
+      }
+    });
+
+    // ── Delete Person ──
+    async function deletePerson(id) {
+      if (!confirm('Remove this person and their chapter?')) return;
+      
+      const res = await fetch(`/api/people/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Person removed', 'info');
+        await loadPeople();
+        await loadChapters();
+      }
+    }
+
+    // ── Generate One Chapter ──
+    async function generateOne(personId) {
+      showLoading('Generating chapter...');
+      try {
+        const res = await fetch('/api/chapters/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ personId, style: currentStyle })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Chapter generated!', 'success');
+          await loadChapters();
+          renderPeople();
+        } else {
+          showToast(data.error || 'Generation failed', 'error');
+        }
+      } catch (err) {
+        showToast('Error generating chapter', 'error');
+      }
+      hideLoading();
+    }
+
+    // ── Deep Dive ──
+    let selectedPersonId = null;
+
+    function openDeepDive(id, name) {
+      selectedPersonId = id;
+      document.getElementById('modal-person-name').textContent = `Deep Dive: ${name}`;
+      document.getElementById('deep-dive-text').value = '';
+      document.getElementById('deep-dive-modal').classList.add('show');
+    }
+
+    function closeDeepDive() {
+      document.getElementById('deep-dive-modal').classList.remove('show');
+    }
+
+    async function submitDeepDive() {
+      const storyText = document.getElementById('deep-dive-text').value.trim();
+      if (!storyText || storyText.length < 50) {
+        showToast('Please provide a longer story (at least 50 characters).', 'warning');
+        return;
+      }
+
+      closeDeepDive();
+      showLoading('Analyzing and expanding your story into chapters...');
+      
+      try {
+        const res = await fetch('/api/chapters/deep-dive', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ personId: selectedPersonId, storyText, style: currentStyle })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`${data.chapters.length} chapters created!`, 'success');
+          await loadChapters();
+          renderPeople();
+          document.getElementById('view-storybook-btn').style.display = 'inline-flex';
+        } else {
+          showToast(data.error || 'Deep dive failed', 'error');
+        }
+      } catch (err) {
+        showToast('Error performing deep dive', 'error');
+      }
+      hideLoading();
+    }
+
+    // ── Generate All Chapters ──
+    document.getElementById('generate-all-btn').addEventListener('click', async () => {
+      showLoading('Crafting your chapters...');
+      try {
+        const res = await fetch('/api/chapters/generate-all', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ style: currentStyle })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`${data.chapters.length} chapters generated!`, 'success');
+          await loadChapters();
+          renderPeople();
+          document.getElementById('view-storybook-btn').style.display = 'inline-flex';
+        } else {
+          showToast(data.error || 'Generation failed', 'error');
+        }
+      } catch (err) {
+        showToast('Error generating chapters', 'error');
+      }
+      hideLoading();
+    });
+
+    // ── Style Selector ──
+    document.querySelectorAll('.style-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.style-option').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentStyle = btn.dataset.style;
+      });
+    });
+
+    // ── Utils ──
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast toast-${type} show`;
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    function showLoading(text) {
+      document.getElementById('loading-text').textContent = text || 'Loading...';
+      document.getElementById('loading').style.display = 'flex';
+    }
+
+    function hideLoading() {
+      document.getElementById('loading').style.display = 'none';
+    }
+
+    function logout() {
+      fetch('/api/auth/logout', { method: 'POST' })
+        .then(() => window.location.href = '/');
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Sign in or create your Life Chapters account.">
+  <title>Sign In – Life Chapters</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">
+        <span class="icon">📖</span>
+        <span>Life Chapters</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Auth Form -->
+  <div class="auth-wrapper">
+    <div class="card auth-card">
+      <!-- Tabs -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-tab="login" id="tab-login">Sign In</button>
+        <button class="auth-tab" data-tab="register" id="tab-register">Create Account</button>
+      </div>
+
+      <!-- Login Form -->
+      <form class="auth-form active" id="login-form">
+        <div class="form-group">
+          <label class="form-label" for="login-username">Username</label>
+          <input type="text" class="form-input" id="login-username" placeholder="Enter your username" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="login-password">Password</label>
+          <input type="password" class="form-input" id="login-password" placeholder="Enter your password" required autocomplete="current-password">
+        </div>
+        <div id="login-error" class="form-error" style="display:none; margin-bottom: 1rem;"></div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;" id="login-submit">
+          Sign In
+        </button>
+      </form>
+
+      <!-- Register Form -->
+      <form class="auth-form" id="register-form">
+        <div class="form-group">
+          <label class="form-label" for="reg-username">Username</label>
+          <input type="text" class="form-input" id="reg-username" placeholder="Choose a username" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="reg-email">Email</label>
+          <input type="email" class="form-input" id="reg-email" placeholder="your@email.com" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="reg-password">Password</label>
+          <input type="password" class="form-input" id="reg-password" placeholder="At least 6 characters" required autocomplete="new-password">
+        </div>
+        <div id="register-error" class="form-error" style="display:none; margin-bottom: 1rem;"></div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;" id="register-submit">
+          Create Account
+        </button>
+      </form>
+
+      <div class="auth-divider">or</div>
+      <p style="text-align: center; font-size: 0.85rem; color: var(--text-muted);">
+        Demo account: <strong style="color: var(--text-secondary);">demo / demo123</strong>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // Tab switching
+    document.querySelectorAll('.auth-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab + '-form').classList.add('active');
+      });
+    });
+
+    // Login
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errorEl = document.getElementById('login-error');
+      errorEl.style.display = 'none';
+
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: document.getElementById('login-username').value,
+          password: document.getElementById('login-password').value
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        window.location.href = '/dashboard';
+      } else {
+        errorEl.textContent = data.error || 'Login failed';
+        errorEl.style.display = 'block';
+      }
+    });
+
+    // Register
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errorEl = document.getElementById('register-error');
+      errorEl.style.display = 'none';
+
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: document.getElementById('reg-username').value,
+          email: document.getElementById('reg-email').value,
+          password: document.getElementById('reg-password').value
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        window.location.href = '/dashboard';
+      } else {
+        errorEl.textContent = data.error || 'Registration failed';
+        errorEl.style.display = 'block';
+      }
+    });
+
+    // Check if already logged in
+    fetch('/api/auth/me')
+      .then(r => r.json())
+      .then(data => {
+        if (data.user) window.location.href = '/dashboard';
+      }).catch(() => {});
+  </script>
+</body>
+</html>

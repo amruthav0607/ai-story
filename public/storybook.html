@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Read your AI-generated personal storybook.">
+  <title>My Storybook – Life Chapters</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">
+        <span class="icon">📖</span>
+        <span>Life Chapters</span>
+      </a>
+      <ul class="navbar-nav">
+        <li><a href="/dashboard">Dashboard</a></li>
+        <li><a href="/storybook" style="color: var(--accent);">My Storybook</a></li>
+        <li><button onclick="logout()" id="nav-logout">Logout</button></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Storybook Content -->
+  <div class="storybook-wrapper" id="storybook-wrapper">
+    <div class="container">
+      <!-- Title -->
+      <div class="storybook-title" id="storybook-title">
+        <h1 id="book-title">My Life Chapters</h1>
+        <p class="author" id="book-author">A personal storybook</p>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div class="tab-group" style="max-width: 500px; margin: 0 auto var(--space-2xl);">
+        <button class="tab-btn active" data-tab="chapters" id="tab-chapters">📖 Chapters</button>
+        <button class="tab-btn" data-tab="timeline" id="tab-timeline">📅 Timeline</button>
+        <button class="tab-btn" data-tab="map" id="tab-map">🗺 Relationship Map</button>
+      </div>
+
+      <!-- Chapters Tab -->
+      <div class="tab-content active" id="content-chapters">
+        <!-- Chapter Dots -->
+        <div class="chapter-dots" id="chapter-dots"></div>
+
+        <!-- Chapter Reader -->
+        <div class="chapter-reader">
+          <div class="card" style="padding: 0; overflow: hidden;">
+            <div class="chapter-display" id="chapter-display">
+              <!-- Dynamic chapter content -->
+            </div>
+            <div class="chapter-nav">
+              <button class="btn btn-ghost" id="prev-btn" onclick="prevChapter()">← Previous</button>
+              <span class="page-info" id="page-info">1 of 1</span>
+              <button class="btn btn-ghost" id="next-btn" onclick="nextChapter()">Next →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Illustration Placeholder -->
+        <div class="illustration-placeholder" id="illustration-area">
+          <span class="icon">🎨</span>
+          <span>Illustration for this chapter</span>
+        </div>
+
+        <!-- Quote -->
+        <div class="quote-decoration" id="chapter-quote">
+          Every person who crosses our path leaves footprints on our hearts.
+        </div>
+      </div>
+
+      <!-- Timeline Tab -->
+      <div class="tab-content" id="content-timeline">
+        <div class="section-header">
+          <h2>Your Life Timeline</h2>
+          <p>The people who shaped your journey, in order</p>
+        </div>
+        <div class="timeline" id="timeline-container">
+          <!-- Dynamic timeline -->
+        </div>
+      </div>
+
+      <!-- Relationship Map Tab -->
+      <div class="tab-content" id="content-map">
+        <div class="section-header">
+          <h2>Relationship Map</h2>
+          <p>Your connections visualized</p>
+        </div>
+        <div class="relationship-map" id="relationship-map">
+          <!-- SVG relationship map -->
+        </div>
+      </div>
+
+      <!-- Export Panel -->
+      <div class="export-panel">
+        <h3>📤 Export Your Storybook</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Download your storybook or share it with someone special</p>
+        <div class="export-actions">
+          <button class="btn btn-primary" id="export-pdf-btn" onclick="exportPDF()">
+            📄 Export as PDF
+          </button>
+          <button class="btn btn-secondary" id="share-btn" onclick="toggleShare()">
+            🔗 Share Storybook
+          </button>
+        </div>
+        <div id="share-notice" style="display: none; margin-top: 1rem; padding: 1rem; background: var(--accent-soft); border-radius: var(--radius-md); font-size: 0.85rem; color: var(--accent);">
+          🔒 Share link copied! Your storybook is private by default — only people with the link can view it.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div class="container" id="empty-storybook" style="display: none;">
+    <div class="empty-state" style="min-height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+      <div class="icon">📝</div>
+      <h3>No Chapters Yet</h3>
+      <p>Go to the Dashboard to add people and generate your storybook chapters.</p>
+      <a href="/dashboard" class="btn btn-primary" style="margin-top: 1rem;">Go to Dashboard</a>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loading" style="display: none;">
+    <div class="spinner" style="width: 48px; height: 48px; border-width: 3px;"></div>
+    <div class="loading-text">Loading your storybook...</div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let storybook = null;
+    let currentChapter = 0;
+
+    const quotes = [
+      "Every person who crosses our path leaves footprints on our hearts.",
+      "We are the stories we tell about the people who shaped us.",
+      "In others, we discover parts of ourselves we never knew existed.",
+      "The chapters of our lives are written by the people we meet.",
+      "Some people arrive and make such a mark, the world is forever different.",
+      "Life is not measured in breaths, but in the moments that take our breath away.",
+      "Each person we meet opens a new chapter in the book of who we are.",
+      "Connection is the invisible thread that weaves the story of our lives."
+    ];
+
+    const roleIcons = {
+      friend: '🤝', mentor: '🎓', lesson: '💡', family: '🏠',
+      partner: '💕', colleague: '💼', stranger: '🌟', rival: '⚔️', inspiration: '🔥'
+    };
+
+    // ── Init ──
+    async function init() {
+      const authRes = await fetch('/api/auth/me');
+      const authData = await authRes.json();
+      if (!authData.user) {
+        window.location.href = '/auth';
+        return;
+      }
+
+      document.getElementById('loading').style.display = 'flex';
+
+      const res = await fetch('/api/chapters/storybook');
+      const data = await res.json();
+      storybook = data.storybook;
+
+      document.getElementById('loading').style.display = 'none';
+
+      if (!storybook || storybook.chapters.length === 0) {
+        document.getElementById('storybook-wrapper').style.display = 'none';
+        document.getElementById('empty-storybook').style.display = 'block';
+        return;
+      }
+
+      document.getElementById('book-title').textContent = storybook.title;
+      document.getElementById('book-author').textContent = `by ${storybook.author}`;
+
+      renderChapterDots();
+      showChapter(0);
+      renderTimeline();
+      renderRelationshipMap();
+    }
+
+    // ── Tabs ──
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('content-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    // ── Chapter Navigation ──
+    function renderChapterDots() {
+      const dotsEl = document.getElementById('chapter-dots');
+      dotsEl.innerHTML = storybook.chapters.map((_, i) => 
+        `<button class="chapter-dot ${i === 0 ? 'active' : ''}" onclick="showChapter(${i})" title="Chapter ${i + 1}"></button>`
+      ).join('');
+    }
+
+    function showChapter(index) {
+      if (!storybook || index < 0 || index >= storybook.chapters.length) return;
+      currentChapter = index;
+      const ch = storybook.chapters[index];
+
+      // Format narrative into paragraphs
+      const paragraphs = ch.narrative.split('\n\n').filter(p => p.trim()).map(p => `<p>${escapeHtml(p.trim())}</p>`).join('');
+
+      document.getElementById('chapter-display').innerHTML = `
+        <div class="chapter-number">Chapter ${index + 1} · ${ch.person_role}</div>
+        <div class="chapter-person-name">About ${escapeHtml(ch.person_name)}</div>
+        <h2>${escapeHtml(ch.title)}</h2>
+        <div class="chapter-narrative">${paragraphs}</div>
+      `;
+
+      // Animate
+      const display = document.getElementById('chapter-display');
+      display.style.animation = 'none';
+      display.offsetHeight; // trigger reflow
+      display.style.animation = 'fadeIn 0.5s var(--ease-out)';
+
+      // Update dots
+      document.querySelectorAll('.chapter-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === index);
+      });
+
+      // Update nav
+      document.getElementById('page-info').textContent = `${index + 1} of ${storybook.chapters.length}`;
+      document.getElementById('prev-btn').disabled = index === 0;
+      document.getElementById('next-btn').disabled = index === storybook.chapters.length - 1;
+      document.getElementById('prev-btn').style.opacity = index === 0 ? 0.3 : 1;
+      document.getElementById('next-btn').style.opacity = index === storybook.chapters.length - 1 ? 0.3 : 1;
+
+      // Update quote
+      document.getElementById('chapter-quote').childNodes[document.getElementById('chapter-quote').childNodes.length - 1].textContent = 
+        quotes[index % quotes.length];
+    }
+
+    function prevChapter() { showChapter(currentChapter - 1); }
+    function nextChapter() { showChapter(currentChapter + 1); }
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') prevChapter();
+      if (e.key === 'ArrowRight') nextChapter();
+    });
+
+    // ── Timeline ──
+    function renderTimeline() {
+      const container = document.getElementById('timeline-container');
+      container.innerHTML = storybook.people.map((p, i) => {
+        const icon = roleIcons[p.role] || '👤';
+        const hasChapter = storybook.chapters.some(c => c.person_id === p.id);
+        return `
+          <div class="timeline-item fade-in visible" style="animation-delay: ${i * 0.1}s">
+            <div class="timeline-dot">${icon}</div>
+            <div class="timeline-content">
+              <h4>${escapeHtml(p.name)} <span style="color: var(--text-muted); font-weight: 400; font-size: 0.85rem;">— ${p.role}</span></h4>
+              <p>${escapeHtml(truncate(p.memory, 120))}</p>
+              ${hasChapter ? `<button class="btn btn-ghost btn-sm" style="margin-top: 0.5rem;" onclick="goToChapter('${p.id}')">Read Chapter →</button>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function goToChapter(personId) {
+      const idx = storybook.chapters.findIndex(c => c.person_id === personId);
+      if (idx >= 0) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.getElementById('tab-chapters').classList.add('active');
+        document.getElementById('content-chapters').classList.add('active');
+        showChapter(idx);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+
+    // ── Relationship Map (SVG) ──
+    function renderRelationshipMap() {
+      const mapEl = document.getElementById('relationship-map');
+      const w = mapEl.clientWidth || 600;
+      const h = 500;
+      const cx = w / 2;
+      const cy = h / 2;
+      const radius = Math.min(w, h) / 2 - 80;
+
+      const roleColors = {
+        friend: '#7da0d4', mentor: '#d4af7d', lesson: '#c9788e', family: '#8db58a',
+        partner: '#c9788e', colleague: '#7da0d4', stranger: '#a09a8e', rival: '#e8786a', inspiration: '#d4af7d'
+      };
+
+      let svg = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">`;
+      
+      // Defs for glow
+      svg += `<defs>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" style="stop-color: rgba(212,175,125,0.3)"/>
+          <stop offset="100%" style="stop-color: rgba(212,175,125,0)"/>
+        </radialGradient>
+      </defs>`;
+
+      // Center glow
+      svg += `<circle cx="${cx}" cy="${cy}" r="${radius * 0.3}" fill="url(#centerGlow)"/>`;
+
+      // Center node (You)
+      svg += `<circle cx="${cx}" cy="${cy}" r="32" fill="rgba(212,175,125,0.2)" stroke="#d4af7d" stroke-width="2" filter="url(#glow)"/>`;
+      svg += `<text x="${cx}" y="${cy + 5}" text-anchor="middle" fill="#d4af7d" font-family="Outfit, sans-serif" font-size="12" font-weight="600">YOU</text>`;
+
+      // People nodes
+      const count = storybook.people.length;
+      storybook.people.forEach((p, i) => {
+        const angle = (Math.PI * 2 * i / count) - Math.PI / 2;
+        const x = cx + Math.cos(angle) * radius;
+        const y = cy + Math.sin(angle) * radius;
+        const color = roleColors[p.role] || '#a09a8e';
+
+        // Connection line
+        svg += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${color}" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4,4"/>`;
+
+        // Node
+        svg += `<circle cx="${x}" cy="${y}" r="24" fill="rgba(255,255,255,0.05)" stroke="${color}" stroke-width="2" filter="url(#glow)" style="cursor: pointer;"/>`;
+
+        // Icon
+        const icon = roleIcons[p.role] || '👤';
+        svg += `<text x="${x}" y="${y + 5}" text-anchor="middle" font-size="16">${icon}</text>`;
+
+        // Label
+        const labelY = y > cy ? y + 42 : y - 34;
+        const name = p.name.length > 12 ? p.name.substring(0, 12) + '…' : p.name;
+        svg += `<text x="${x}" y="${labelY}" text-anchor="middle" fill="#f0ece4" font-family="Outfit, sans-serif" font-size="11" font-weight="500">${escapeHtml(name)}</text>`;
+        svg += `<text x="${x}" y="${labelY + 15}" text-anchor="middle" fill="#a09a8e" font-family="Outfit, sans-serif" font-size="9">${p.role}</text>`;
+      });
+
+      svg += `</svg>`;
+      mapEl.innerHTML = svg;
+    }
+
+    // ── PDF Export ──
+    async function exportPDF() {
+      if (!storybook || storybook.chapters.length === 0) {
+        showToast('No chapters to export', 'error');
+        return;
+      }
+
+      showToast('Generating PDF...', 'info');
+
+      try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+        const pageW = doc.internal.pageSize.getWidth();
+        const pageH = doc.internal.pageSize.getHeight();
+        const margin = 25;
+        const maxW = pageW - margin * 2;
+
+        // ── Title Page ──
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(28);
+        doc.setTextColor(80, 60, 40);
+        const titleLines = doc.splitTextToSize(storybook.title, maxW);
+        doc.text(titleLines, pageW / 2, pageH / 2 - 20, { align: 'center' });
+
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(14);
+        doc.setTextColor(140, 120, 100);
+        doc.text(`by ${storybook.author}`, pageW / 2, pageH / 2 + 10, { align: 'center' });
+
+        doc.setFontSize(10);
+        doc.text(`Generated on ${new Date().toLocaleDateString()}`, pageW / 2, pageH / 2 + 25, { align: 'center' });
+
+        // ── Chapters ──
+        storybook.chapters.forEach((ch, i) => {
+          doc.addPage();
+
+          // Chapter header
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(10);
+          doc.setTextColor(180, 150, 120);
+          doc.text(`CHAPTER ${i + 1}  ·  ${ch.person_role?.toUpperCase() || ''}`, margin, margin);
+
+          doc.setFont('helvetica', 'italic');
+          doc.setFontSize(11);
+          doc.setTextColor(120, 100, 80);
+          doc.text(`About ${ch.person_name}`, margin, margin + 8);
+
+          // Title
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(20);
+          doc.setTextColor(80, 60, 40);
+          const chTitleLines = doc.splitTextToSize(ch.title, maxW);
+          doc.text(chTitleLines, margin, margin + 22);
+
+          // Decorative line
+          const titleEndY = margin + 22 + chTitleLines.length * 8;
+          doc.setDrawColor(212, 175, 125);
+          doc.setLineWidth(0.5);
+          doc.line(margin, titleEndY + 2, margin + 40, titleEndY + 2);
+
+          // Narrative
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(11);
+          doc.setTextColor(60, 55, 50);
+          const narrative = ch.narrative.replace(/\n\n/g, '\n\n');
+          const lines = doc.splitTextToSize(narrative, maxW);
+          
+          let y = titleEndY + 12;
+          lines.forEach(line => {
+            if (y > pageH - margin) {
+              doc.addPage();
+              y = margin;
+            }
+            doc.text(line, margin, y);
+            y += 6;
+          });
+
+          // Page number
+          doc.setFontSize(9);
+          doc.setTextColor(180, 170, 160);
+          doc.text(`${i + 2}`, pageW / 2, pageH - 12, { align: 'center' });
+        });
+
+        doc.save(`${storybook.title.replace(/[^a-zA-Z0-9 ]/g, '')}.pdf`);
+        showToast('PDF downloaded!', 'success');
+      } catch (err) {
+        console.error('PDF export error:', err);
+        showToast('Failed to generate PDF. Please try again.', 'error');
+      }
+    }
+
+    // ── Share ──
+    function toggleShare() {
+      const notice = document.getElementById('share-notice');
+      if (notice.style.display === 'none') {
+        notice.style.display = 'block';
+        // Simulate copy
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(window.location.href).catch(() => {});
+        }
+      } else {
+        notice.style.display = 'none';
+      }
+    }
+
+    // ── Utils ──
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function truncate(text, len) {
+      return text.length > len ? text.substring(0, len) + '...' : text;
+    }
+
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast toast-${type} show`;
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    function logout() {
+      fetch('/api/auth/logout', { method: 'POST' })
+        .then(() => window.location.href = '/');
+    }
+
+    init();
+  </script>
+</body>
+</html>
